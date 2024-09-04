@@ -1012,14 +1012,9 @@ nginx -v
 更新的系统信息，然后使用以下指令安装 Nginx:<br>
 
 ```bash
-sudo apt update
-```
-
-```bash
+# 更新软件包索引
 sudo apt upgrade
-```
-
-```bash
+# 安装Nginx
 sudo apt install nginx
 ```
 
