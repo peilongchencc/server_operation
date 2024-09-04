@@ -38,7 +38,9 @@
     - [域名解析配置:](#域名解析配置)
     - [ICP备案:](#icp备案)
     - [服务器开启端口：](#服务器开启端口)
+    - [安装 Certbot 和 Nginx 插件:](#安装-certbot-和-nginx-插件)
     - [使用 Certbot 正在为指定的域名获取一个(新的) SSL/TLS 证书:](#使用-certbot-正在为指定的域名获取一个新的-ssltls-证书)
+    - [cannot import name 'appengine' from 'urllib3.contrib'错误解决(可选):](#cannot-import-name-appengine-from-urllib3contrib错误解决可选)
     - [验证SSL证书是否有效(可选):](#验证ssl证书是否有效可选)
     - [Nginx配置:](#nginx配置)
       - [安装Nginx:](#安装nginx)
@@ -807,6 +809,15 @@ https://help.aliyun.com/zh/icp-filing/basic-icp-service/user-guide/for-the-first
 
 需要确保服务器的 80 端口（HTTP）和 443 端口（HTTPS）是开放的，因为这是 web 服务的标准端口。以笔者所用的阿里云服务器为例，，需要在云服务控制面板中配置安全组规则来开放这2个端口。<br>
 
+### 安装 Certbot 和 Nginx 插件:
+
+```bash
+# 更新软件包索引
+sudo apt update
+# 安装 Certbot 和 Nginx 插件
+sudo apt install certbot python3-certbot-nginx
+```
+
 ### 使用 Certbot 正在为指定的域名获取一个(新的) SSL/TLS 证书:
 
 终端运行以下指令，使用 Certbot 正在为指定的域名获取一个(新的) SSL/TLS 证书，注意将域名修改为你自己的域名:<br>
@@ -889,6 +900,47 @@ IMPORTANT NOTES:
 ```
 
 上述信息提到提到证书将在 2024-04-28 过期，建议在未来要更新或修改证书时再次运行 Certbot。也可以使用 `certbot renew` 命令自动更新所有证书。<br>
+
+### cannot import name 'appengine' from 'urllib3.contrib'错误解决(可选):
+
+由于 Certbot 默认情况下使用系统自带的 Python，而不是虚拟环境中的 Python。如果你基础环境(非base)中缺少依赖，可能提示 "cannot import name 'appengine' from 'urllib3.contrib'" 错误。
+
+详细的操作示例如下:
+
+```log
+(tmp) root@iZ2ze50qtwycx9cbbvesvxZ:/project/chenpeilong/ssl_connect# which python
+/root/anaconda3/envs/tmp/bin/python
+(tmp) root@iZ2ze50qtwycx9cbbvesvxZ:/project/chenpeilong/ssl_connect# python --version
+Python 3.12.4
+(tmp) root@iZ2ze50qtwycx9cbbvesvxZ:/project/chenpeilong/ssl_connect# sudo certbot --nginx -d synaide.aistar.com
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/requests_toolbelt/_compat.py", line 48, in <module>
+  # 其他错误省略
+  File "/usr/lib/python3/dist-packages/requests_toolbelt/_compat.py", line 50, in <module>
+    from urllib3.contrib import appengine as gaecontrib
+ImportError: cannot import name 'appengine' from 'urllib3.contrib' (/usr/local/lib/python3.10/dist-packages/urllib3/contrib/__init__.py)
+root@iZ2ze50qtwycx9cbbvesvxZ:/project/chenpeilong/ssl_connect# which python
+root@iZ2ze50qtwycx9cbbvesvxZ:/project/chenpeilong/ssl_connect# python --version
+Command 'python' not found, did you mean:
+  command 'python3' from deb python3
+  command 'python' from deb python-is-python3
+root@iZ2ze50qtwycx9cbbvesvxZ:/project/chenpeilong/ssl_connect# python3 --version
+Python 3.10.12
+root@iZ2ze50qtwycx9cbbvesvxZ:/project/chenpeilong/ssl_connect# 
+```
+
+> 看你的系统配置，如果 `python --version` 不显示内容，试试 `python3 --version`。
+
+可以看出，Certbot 使用的是基础环境中的 python 3.10，而不是虚拟环境中的 python 3.12。
+
+解决方案:
+
+```bash
+# 卸载
+pip uninstall urllib3 requests_toolbelt
+# 重新安装
+pip install urllib3 requests_toolbelt
+```
 
 ### 验证SSL证书是否有效(可选):
 
