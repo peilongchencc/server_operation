@@ -36,6 +36,7 @@
   - [将"ip+port"改为通过域名访问自己的服务:](#将ipport改为通过域名访问自己的服务)
     - [域名购买与实名认证:](#域名购买与实名认证)
     - [域名解析配置:](#域名解析配置)
+    - [主机记录使用详解(可选):](#主机记录使用详解可选)
     - [ICP备案:](#icp备案)
     - [服务器开启端口：](#服务器开启端口)
     - [安装 Certbot 和 Nginx 插件:](#安装-certbot-和-nginx-插件)
@@ -793,6 +794,22 @@ https://dns.console.aliyun.com/?spm=5176.smartservice_service_robot_chat_new.hel
 
 记录类型要看自己的IP是什么类型，我的公网IP为 `8.140...`，是IPv4，所以选的A记录类型。<br>
 
+### 主机记录使用详解(可选):
+
+主机记录就是域名前缀，常用主机记录及含义如下:
+
+```markdown
+| 主机记录 | 说明 |
+| -------- | ---- |
+| www      | 表示域名 www.pei long chen c c |
+| @        | 表示主域名 peilongchencc.cn |
+| *        | 泛解析，表示满足格式 *.peilongchencc.cn 的所有域名（记录类型为“显性URL”时，不允许设置泛解析） |
+| mail     | 表示域名 mail.peilongchencc.cn，常用于邮箱业务的解析设置 |
+| m        | 表示域名 m.peilongchencc.cn，常用于手机版网站 |
+| 二级域名 | 如 abc.peilongchencc.cn，则写 abc |
+| 多级域名 | 如 cd.ab.peilongchencc.cn，则写 ab.cd |
+```
+
 ### ICP备案:
 
 实名注册域名、管理局审核通过后，还需要进行ICP备案。<br>
@@ -912,7 +929,7 @@ IMPORTANT NOTES:
 /root/anaconda3/envs/tmp/bin/python
 (tmp) root@iZ2ze50qtwycx9cbbvesvxZ:/project/chenpeilong/ssl_connect# python --version
 Python 3.12.4
-(tmp) root@iZ2ze50qtwycx9cbbvesvxZ:/project/chenpeilong/ssl_connect# sudo certbot --nginx -d synaide.aistar.com
+(tmp) root@iZ2ze50qtwycx9cbbvesvxZ:/project/chenpeilong/ssl_connect# sudo certbot --nginx -d synaide.peilongchencc.cn
 Traceback (most recent call last):
   File "/usr/lib/python3/dist-packages/requests_toolbelt/_compat.py", line 48, in <module>
   # 其他错误省略
@@ -934,6 +951,8 @@ root@iZ2ze50qtwycx9cbbvesvxZ:/project/chenpeilong/ssl_connect#
 可以看出，Certbot 使用的是基础环境中的 python 3.10，而不是虚拟环境中的 python 3.12。
 
 解决方案:
+
+在基础环境(非base)运行下列指令:
 
 ```bash
 # 卸载
