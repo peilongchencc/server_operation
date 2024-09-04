@@ -802,7 +802,7 @@ https://dns.console.aliyun.com/?spm=5176.smartservice_service_robot_chat_new.hel
 ```markdown
 | 主机记录 | 说明 |
 | -------- | ---- |
-| www      | 表示域名 www.pei long chen c c |
+| www      | 表示域名 www.peilongchencc.cn |
 | @        | 表示主域名 peilongchencc.cn |
 | *        | 泛解析，表示满足格式 *.peilongchencc.cn 的所有域名（记录类型为“显性URL”时，不允许设置泛解析） |
 | mail     | 表示域名 mail.peilongchencc.cn，常用于邮箱业务的解析设置 |
