@@ -42,6 +42,7 @@
     - [安装 Certbot 和 Nginx 插件:](#安装-certbot-和-nginx-插件)
     - [使用 Certbot 正在为指定的域名获取一个(新的) SSL/TLS 证书:](#使用-certbot-正在为指定的域名获取一个新的-ssltls-证书)
     - [cannot import name 'appengine' from 'urllib3.contrib'错误解决(可选):](#cannot-import-name-appengine-from-urllib3contrib错误解决可选)
+    - [Certbot 写入 Nginx 的操作含义(可选)：](#certbot-写入-nginx-的操作含义可选)
     - [验证SSL证书是否有效(可选):](#验证ssl证书是否有效可选)
     - [Nginx配置:](#nginx配置)
       - [安装Nginx:](#安装nginx)
@@ -837,12 +838,26 @@ sudo apt install certbot python3-certbot-nginx
 
 ### 使用 Certbot 正在为指定的域名获取一个(新的) SSL/TLS 证书:
 
-终端运行以下指令，使用 Certbot 正在为指定的域名获取一个(新的) SSL/TLS 证书，注意将域名修改为你自己的域名:<br>
+为指定的域名获取一个(新的) SSL/TLS 证书方式有很多，笔者使用的是`Let's Encrypt`（Certbot是Let's Encrypt中的获取工具）。
 
 > Certbot获取的SSL证书是免费的，阿里云的SSL证书一年4000¥以上。
 > 连接Certbot不需要开通代理，正常网络连接即可。
 
+笔者可以从以下两种形式，根据自己的情况自主选择获取方式:
+
+> 注意将域名修改为你自己的域名。
+
+1. 如果你希望 Certbot 自动完成证书获取和 Nginx 配置，那么直接使用 certbot --nginx 是更方便的选择。
+
 ```bash
+# 不使用 certonly 更适合希望简单快捷地部署 HTTPS 的用户，让 Certbot 自动完成所有步骤。
+sudo certbot --nginx -d www.peilongchencc.cn
+```
+
+2. 如果你希望 Certbot 只获取证书，并且自行配置 Nginx，使用 certonly 选项。
+
+```bash
+# 使用 certonly 更适合那些有特定需求的用户，比如你需要手动配置、使用不同的证书管理工具，或者你不希望 Certbot 自动修改 Nginx 配置。
 sudo certbot certonly --nginx -d www.peilongchencc.cn
 ```
 
@@ -960,6 +975,19 @@ pip uninstall urllib3 requests_toolbelt
 # 重新安装
 pip install urllib3 requests_toolbelt
 ```
+
+### Certbot 写入 Nginx 的操作含义(可选)：
+
+Certbot 主要做了以下工作：
+
+1. **创建或修改了 Nginx 配置**：它将证书路径（`fullchain.pem` 和 `privkey.pem`）写入到了 Nginx 的站点配置文件中，通常在 `/etc/nginx/sites-enabled/default` 或类似文件里。这意味着访问 `https://sys-user.peilongchencc.cn` 时，Nginx 会使用刚刚生成的 SSL 证书。
+
+2. **配置了 HTTPS 监听**：Certbot 会让 Nginx 监听 443 端口，处理 HTTPS 请求。
+
+然而，**这并不包括与后端服务的绑定**，Certbot 的工作仅限于 SSL 证书的生成和 Nginx 的 HTTPS 配置。
+
+🚨注意: 如果想要将域名和后端服务绑定，还需要手动修改 Nginx 的配置文件来将你的域名（`sys-user.peilongchencc.cn`）请求转发到后端服务。
+
 
 ### 验证SSL证书是否有效(可选):
 
