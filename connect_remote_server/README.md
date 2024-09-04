@@ -931,7 +931,21 @@ IMPORTANT NOTES:
 /etc/letsencrypt/live/www.peilongchencc.cn/privkey.pem
 ```
 
-上述信息提到提到证书将在 2024-04-28 过期，建议在未来要更新或修改证书时再次运行 Certbot。也可以使用 `certbot renew` 命令自动更新所有证书。<br>
+上述信息提到提到证书将在 2024-04-28 过期，建议在未来要更新或修改证书时再次运行 Certbot。也可以使用 `certbot renew` 命令自动更新所有证书，或者使用`crontab`进行监测。<br>
+
+🌈获得的SSL证书和链文件固定保存在 `/etc/letsencrypt/live` 路径，例如:
+
+```bash
+(langchain) root@iZ2ze50qtwycx9cbbvesvxZ:/project# cd /etc/letsencrypt/live
+(langchain) root@iZ2ze50qtwycx9cbbvesvxZ:/etc/letsencrypt/live# ll
+total 20
+drwx------ 4 root root 4096 Sep  4 13:41 ./
+drwxr-xr-x 9 root root 4096 Sep  4 13:41 ../
+-rw-r--r-- 1 root root  740 Sep  4 13:35 README
+drwxr-xr-x 2 root root 4096 Sep  4 13:41 sys-custom.peilongchencc.cn/
+drwxr-xr-x 2 root root 4096 Sep  4 13:35 sys-user.peilongchencc.cn/
+(langchain) root@iZ2ze50qtwycx9cbbvesvxZ:/etc/letsencrypt/live# 
+```
 
 ### cannot import name 'appengine' from 'urllib3.contrib'错误解决(可选):
 
