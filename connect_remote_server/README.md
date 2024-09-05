@@ -47,9 +47,10 @@
     - [Nginx配置:](#nginx配置)
       - [安装Nginx:](#安装nginx)
       - [配置Nginx:](#配置nginx)
+      - [Websockets服务的Nginx配置:](#websockets服务的nginx配置)
+      - [检查配置文件的语法并重新启动 Nginx:](#检查配置文件的语法并重新启动-nginx)
       - [重定向 HTTP 到 HTTPS（可选）:](#重定向-http-到-https可选)
       - [答疑-Nginx配置中哪部分表示了"www"记录？哪部分表示了"@"记录？](#答疑-nginx配置中哪部分表示了www记录哪部分表示了记录)
-      - [检查配置文件的语法并重新启动 Nginx:](#检查配置文件的语法并重新启动-nginx)
 
 
 ## 连接阿里云服务器：
@@ -1030,15 +1031,22 @@ nginx -v
 sudo apt upgrade
 # 安装Nginx
 sudo apt install nginx
-```
-
-终端输入以下指令，检查 Nginx 版本:<br>
-
-```bash
+# 再次检查Nginx的版本，确认Nginx正确安装
 nginx -v
 ```
 
 #### 配置Nginx:
+
+假设现在你已经配好了域名(`www.peilongchencc.cn`)，并申请了SSL证书。
+
+要实现域名和服务连接，还需要在`sites-available`中写入配置文件:
+
+```bash
+vim /etc/nginx/sites-available/www.peilongchencc.cn
+```
+
+配置文件内容如下:
+
 
 ```conf
 server {
@@ -1070,6 +1078,61 @@ server {
 }
 ```
 
+然后配置软链接到 `sites-enabled`:
+
+> 软链接类似快捷方式，可以让Nginx更快检索。
+
+```bash
+sudo ln -s /etc/nginx/sites-available/www.peilongchencc.cn /etc/nginx/sites-enabled/
+```
+
+#### Websockets服务的Nginx配置:
+
+🚨以Gradio举例，Gradio 的 `demo.launch()` 使用 WebSocket 来实现流式响应，而 Nginx 默认不支持 WebSocket，需要专门配置以允许 WebSocket 连接。
+
+💢如果你不在Nginx中添加WebSockets配置，会出现 `ip+port` 访问服务时为流式输出，域名访问时为非流式输出的情况。
+
+以笔者使用的 `/etc/nginx/sites-available/www.peilongchencc.cn` 为例，需要修改为以下形式:
+
+```conf
+server {
+    listen 80;
+    server_name peilongchencc.cn www.peilongchencc.cn;
+    
+    # 重定向所有 HTTP 请求到 HTTPS
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name peilongchencc.cn www.peilongchencc.cn;
+
+    ssl_certificate /etc/letsencrypt/live/www.peilongchencc.cn/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/www.peilongchencc.cn/privkey.pem;
+
+    # 开启 WebSocket 代理
+    location / {
+        proxy_pass http://localhost:7860;
+
+        # WebSocket 相关头信息
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # 保持真实IP信息
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # 防止超时(任何一个时刻超过 60 秒没有数据传输)
+        # 以流式输出举例，如果程序一直在输出内容，超过60s也不会报错。
+        proxy_read_timeout 60s;
+        proxy_send_timeout 60s;
+    }
+}
+```
+
 这个配置做了以下几件事情：<br>
 
 监听 80 端口（HTTP）：所有到达 "peilongchencc.cn" 或 "www.peilongchencc.cn" 的 HTTP 请求都会被重定向到 HTTPS。<br>
@@ -1079,6 +1142,24 @@ server {
 SSL 证书和密钥：使用 Let's Encrypt 提供的证书和密钥。<br>
 
 代理到本地服务：所有请求都被代理到运行在本机的 7860 端口上的服务。<br>
+
+#### 检查配置文件的语法并重新启动 Nginx:
+
+假定你现在已经按照上述操作将Nginx配置导入了自己的Nginx配置，现在请按照以下步骤执行:<br>
+
+检查配置文件的语法是否正确，使用命令:<br>
+
+```bash
+sudo nginx -t
+```
+
+如果没有错误，重新启动 Nginx 以应用更改，使用命令:<br>
+
+```bash
+sudo systemctl restart nginx
+```
+
+完成这些步骤后，且你的ICP备案通过来，用户就可以通过 "https://peilongchencc.cn" 和 "https://www.peilongchencc.cn" 正常访问你的服务了。<br>
 
 #### 重定向 HTTP 到 HTTPS（可选）:
 
@@ -1099,21 +1180,3 @@ Answer:<br>
 在 Nginx 配置中，并没有专门用来区分 "www" 记录和 "@" 记录的特定部分。server_name 指令可以接受多个域名，这意味着无论用户输入的 URL 中包含 "www" 还是不包含，只要这些域名都在 server_name 指令中列出，Nginx 都会为它们提供服务。<br>
 
 上述Nginx配置能够处理同时指向 "peilongchencc.cn" 和 "www.peilongchencc.cn" 的请求。这样做的好处是无论用户访问哪个版本的域名（无论是带 "www" 还是不带），他们都能够访问到同一个网站。<br>
-
-#### 检查配置文件的语法并重新启动 Nginx:
-
-假定你现在已经按照上述操作将Nginx配置导入了自己的Nginx配置，现在请按照以下步骤执行:<br>
-
-检查配置文件的语法是否正确，使用命令:<br>
-
-```bash
-sudo nginx -t
-```
-
-如果没有错误，重新启动 Nginx 以应用更改，使用命令:<br>
-
-```bash
-sudo systemctl restart nginx
-```
-
-完成这些步骤后，且你的ICP备案通过来，用户就可以通过 "https://peilongchencc.cn" 和 "https://www.peilongchencc.cn" 正常访问你的服务了。<br>
