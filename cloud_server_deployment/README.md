@@ -35,6 +35,11 @@
       - [1. 检查配置文件的语法是否正确:](#1-检查配置文件的语法是否正确)
       - [2. 重新加载Nginx配置:](#2-重新加载nginx配置)
   - [关闭公网IP访问方式:](#关闭公网ip访问方式)
+  - [前端dist文件借助Nginx启动服务(可选):](#前端dist文件借助nginx启动服务可选)
+    - [1. 域名创建于解析:](#1-域名创建于解析)
+    - [2. 域名SSL证书获取:](#2-域名ssl证书获取)
+    - [3. 配置Nginx:](#3-配置nginx)
+    - [附录: 端口监测取消](#附录-端口监测取消)
   - [附录--重定向 HTTP 到 HTTPS(可跳过):](#附录--重定向-http-到-https可跳过)
   - [附录--Nginx配置中哪部分表示了"www"记录？哪部分表示了"@"记录？](#附录--nginx配置中哪部分表示了www记录哪部分表示了记录)
 
@@ -441,6 +446,65 @@ gr.ChatInterface(slow_echo).launch(server_name="127.0.0.1", server_port=8867)
 https://peilongchencc.cn
 https://www.peilongchencc.cn
 ```
+
+
+## 前端dist文件借助Nginx启动服务(可选):
+
+### 1. 域名创建于解析:
+
+阿里云域名控制台配置自己的服务域名。
+
+### 2. 域名SSL证书获取:
+
+```bash
+sudo certbot certonly --nginx -d bankchatbot.aistar.com
+```
+
+### 3. 配置Nginx:
+
+```bash
+vim /etc/nginx/sites-available/bankchatbot.aistar.com
+```
+
+然后填入下列内容:
+
+```conf
+server {
+    listen 80;
+    server_name bankchatbot.aistar.com;
+
+    # 将所有 HTTP 请求重定向到 HTTPS
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name bankchatbot.aistar.com;
+
+    # Let's Encrypt 证书和私钥路径
+    ssl_certificate /etc/letsencrypt/live/bankchatbot.aistar.com/fullchain.pem;  # SSL 证书的完整链路径
+    ssl_certificate_key /etc/letsencrypt/live/bankchatbot.aistar.com/privkey.pem;  # SSL 私钥的路径
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    # 网站根目录和首页设置
+    root /project/chenpeilong/bank_chatbot/front_end_services;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+### 附录: 端口监测取消
+
+如果你之前的配置中有 `listen 8101;`，那说明 Nginx 当时是监听在 `8101` 端口上，用户需要通过 `http://your-ip:8101` 的方式来访问应用。
+
+现在你已经将访问切换到通过域名 `bankchatbot.aistar.com`，并且你还申请了 SSL 证书，那么通常情况下只需要监听 **80** 和 **443** 端口，不再需要监听 `8101`，因为标准的 HTTP 和 HTTPS 端口分别是 80 和 443。
+
+所以，如果你不再需要通过 `8101` 端口来访问，可以移除对该端口的监听。新的配置文件应该只监听标准的 80 和 443 端口。
 
 
 ## 附录--重定向 HTTP 到 HTTPS(可跳过):
