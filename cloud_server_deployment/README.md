@@ -41,10 +41,24 @@
     - [2. 域名SSL证书获取:](#2-域名ssl证书获取)
     - [3. 配置Nginx:](#3-配置nginx)
     - [端口监测取消(解释性内容):](#端口监测取消解释性内容)
-  - [4. 复杂情况的Nginx配置:](#4-复杂情况的nginx配置)
+    - [4. 复杂情况的Nginx配置:](#4-复杂情况的nginx配置)
+      - [配置说明：](#配置说明)
+      - [配置优点：](#配置优点)
+      - [调用示例：](#调用示例)
     - [5. 配置软链接到 `sites-enabled`:](#5-配置软链接到-sites-enabled)
     - [6. 检查配置文件的语法并重载Nginx配置:](#6-检查配置文件的语法并重载nginx配置)
-    - [7. 效果解释(可以跳过):](#7-效果解释可以跳过)
+  - [拓展--Nginx与FastAPI:](#拓展--nginx与fastapi)
+    - [FastAPI 与 Nginx 的不同](#fastapi-与-nginx-的不同)
+      - [1. FastAPI 是一个 Web 框架：](#1-fastapi-是一个-web-框架)
+      - [2. Nginx 是一个 Web 服务器和反向代理服务器：](#2-nginx-是一个-web-服务器和反向代理服务器)
+    - [什么时候使用 FastAPI，什么时候使用 Nginx？](#什么时候使用-fastapi什么时候使用-nginx)
+      - [1. FastAPI 用于处理业务逻辑：](#1-fastapi-用于处理业务逻辑)
+      - [2. Nginx 用于高效处理静态文件和反向代理：](#2-nginx-用于高效处理静态文件和反向代理)
+    - [推荐的部署方式：Nginx + FastAPI](#推荐的部署方式nginx--fastapi)
+      - [1. Nginx 作为反向代理：](#1-nginx-作为反向代理)
+      - [2. Nginx 处理静态文件：](#2-nginx-处理静态文件)
+      - [3. 域名配置：](#3-域名配置)
+    - [总结](#总结)
   - [附录--重定向 HTTP 到 HTTPS(可跳过):](#附录--重定向-http-到-https可跳过)
   - [附录--Nginx配置中哪部分表示了"www"记录？哪部分表示了"@"记录？](#附录--nginx配置中哪部分表示了www记录哪部分表示了记录)
 
@@ -517,7 +531,7 @@ server {
 
 所以，如果你不再需要通过 `8101` 端口来访问，可以移除对该端口的监听。新的配置文件应该只监听标准的 80 和 443 端口。
 
-## 4. 复杂情况的Nginx配置:
+### 4. 复杂情况的Nginx配置:
 
 前面的示例很简单，前端服务通常需要访问后端服务，以 **客服系统** 为例。假设有以下场景:
 
@@ -543,75 +557,68 @@ server {
     server_name chatbot.peilongchencc.cn;
 
     # Let's Encrypt 证书和私钥路径
-    ssl_certificate /etc/letsencrypt/live/chatbot.peilongchencc.cn/fullchain.pem;  # SSL 证书的完整链路径
-    ssl_certificate_key /etc/letsencrypt/live/chatbot.peilongchencc.cn/privkey.pem;  # SSL 私钥的路径
+    ssl_certificate /etc/letsencrypt/live/chatbot.peilongchencc.cn/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/chatbot.peilongchencc.cn/privkey.pem;
 
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
 
+    # 静态文件处理
     location / {
-        # 网站根目录和首页设置
         root /project/chenpeilong/bank_chatbot/front_end_services;
         index index.html;
         try_files $uri $uri/ /index.html;
     }
 
-    # WebSocket请求，代理到FastAPI后端
+    # 处理 WebSocket 连接
     location /ws/ {
-        proxy_pass http://localhost:8848/ws/;  # 转发到 FastAPI WebSocket 端点
-
-        # 支持 WebSocket 连接，WebSocket 升级需要设置 HTTP/1.1 协议
+        proxy_pass http://localhost:8848/ws/;  # 代理到 FastAPI 的 WebSocket 端点
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
-
-        # 保留客户端的真实请求信息
-        proxy_set_header Host $host;  # 保留客户端的 Host 头信息
-        proxy_set_header X-Real-IP $remote_addr;  # 传递客户端的真实 IP 地址
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;  # 传递代理链中的客户端 IP 地址
-        proxy_set_header X-Forwarded-Proto $scheme;  # 保留客户端的协议（HTTP 或 HTTPS）
-
-        # 关闭 Nginx 的代理缓冲，提升实时通讯效率，默认是 proxy_buffering on;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_buffering off;
-
-        # 防止超时(任何一个时刻超过 60 秒没有数据传输)
-        # 如果超过 60 秒没有数据传输，则可能触发超时错误，proxy_read_timeout 和 proxy_send_timeout 用于防止此类问题
-        # 以流式输出举例，如果程序一直在输出内容，超过60s也不会报错。
-        proxy_read_timeout 60s;  # 允许 Nginx 等待后端服务器的响应，最长不超过 60 秒
-        proxy_send_timeout 60s;  # 允许 Nginx 发送数据到后端服务器的时间限制，最长不超过 60 秒
+        proxy_read_timeout 60s;
+        proxy_send_timeout 60s;
     }
 
-    # http请求处理方式
-    location /bank_chatbot {
-        proxy_pass http://localhost:8848/bank_chatbot;  # 将所有请求代理到本地主机的 8848 端口上的服务
-        proxy_set_header Host $host;  # 保持客户端的 Host 请求头
-        proxy_set_header X-Real-IP $remote_addr;  # 设置客户端真实的 IP 地址
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;  # 保留客户端 IP 地址，加入代理链中
-        proxy_set_header X-Forwarded-Proto $scheme;  # 将原始的协议（HTTP 或 HTTPS）传递给后端服务器
+    # 处理 API 请求，将所有请求代理到 FastAPI 后端
+    location /api/ {
+        proxy_pass http://localhost:8848/;  # 将请求代理到本地主机的 FastAPI 服务
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
-
-    # http请求处理方式
-    location /get_chat_history {
-        proxy_pass http://localhost:8848/get_chat_history;  # 将所有请求代理到本地主机的 8848 端口上的服务
-        proxy_set_header Host $host;  # 保持客户端的 Host 请求头
-        proxy_set_header X-Real-IP $remote_addr;  # 设置客户端真实的 IP 地址
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;  # 保留客户端 IP 地址，加入代理链中
-        proxy_set_header X-Forwarded-Proto $scheme;  # 将原始的协议（HTTP 或 HTTPS）传递给后端服务器
-    }
-
-    # http请求处理方式
-    location /clean_chat_history {
-        proxy_pass http://localhost:8848/clean_chat_history;  # 将所有请求代理到本地主机的 8848 端口上的服务
-        proxy_set_header Host $host;  # 保持客户端的 Host 请求头
-        proxy_set_header X-Real-IP $remote_addr;  # 设置客户端真实的 IP 地址
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;  # 保留客户端 IP 地址，加入代理链中
-        proxy_set_header X-Forwarded-Proto $scheme;  # 将原始的协议（HTTP 或 HTTPS）传递给后端服务器
-    }
-
 }
 ```
 
 > 🚨注意: 如果你替换了前端dist文件，也要重载Nginx配置才能生效，界面才能更改。
+
+#### 配置说明：
+
+1. **基础路径 `/`**：处理静态文件和前端页面，例如 `index.html` 文件。
+
+2. **WebSocket 处理 `/ws/`**：专门用于处理 WebSocket 请求，并代理到 FastAPI 的 WebSocket 端点。
+
+3. **API 请求处理 `/api/`**：将所有以 `/api/` 开头的请求代理到 FastAPI 的后端服务。在 FastAPI 中，你可以通过 `/api/bank_chatbot`、`/api/get_chat_history` 等路径调用不同的 API。
+
+#### 配置优点：
+
+- **简化配置**：你不需要为每个 API 路径单独配置 `location`，Nginx 会将所有 API 请求统一代理到 FastAPI 后端。
+
+- **可扩展性**：如果你以后有更多的 API 接口，依旧不需要修改 Nginx 配置，FastAPI 会自动处理这些请求。
+
+#### 调用示例：
+
+- **POST 请求 `/bank_chatbot`**：前端调用 URL 为 `https://chatbot.peilongchencc.cn/api/bank_chatbot`。
+
+- **GET 请求 `/get_chat_history`**：前端调用 URL 为 `https://chatbot.peilongchencc.cn/api/get_chat_history`。
+
+- **WebSocket 请求**：例如连接 WebSocket URL `wss://chatbot.peilongchencc.cn/ws/{client_id}to{target_id}`。
 
 ### 5. 配置软链接到 `sites-enabled`:
 
@@ -630,17 +637,103 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-### 7. 效果解释(可以跳过):
+## 拓展--Nginx与FastAPI:
 
-用户在浏览器时，可以通过 `https://chatbot.peilongchencc.cn` 访问前端界面。前端同事可以调用 `https://chatbot.peilongchencc.cn/bank_chatbot` 接口、传参与后端服务交互。
+🚨注意: 由于笔者将后端服务的跳转，利用Nginx做了转发，所以使用 `http://localhost:8848/` 也能跳转到我的服务。
 
-如果是websocket接口，需要调用类似 `wss://chatbot.peilongchencc.cn/ws/1001to6001` 接口进行交互，具体需要看你的接口是怎么定义的。
+如果你不使用Nginx做转发，前端同事调用你的后端接口，需要使用外网方式(ip或域名)，不能使用`localhost`。当然，这里是假设你使用Nginx启动了dist文件，如果你使用FastAPI挂载dist文件，然后启动服务，依旧可以使用 `localhost`。示例如下:
 
-注意:
+```python
+# 文件目录如下:
+# ├── main.py
+# ├── static
+# │   ├── css
+# │   │   ├── customerservice.f11e23d4.css
+# │   │   └── user.c10967cc.css
+# │   ├── img
+# │   │   ├── AI.046ace8e.png
+# │   │   └── headportrait.5fd9eb10.png
+# │   ├── index.html
+# │   ├── js
+# │   │   ├── 404.f3c05b92.js
+# │   │   ├── customerservice.086dd39a.js
+# │   │   └── user.3fd31123.js
+# │   └── logo.ico
+import os
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
-由于笔者将后端服务的跳转，利用Nginx做了转发，所以使用 `http://localhost:8848/bank_chatbot` 也能跳转到我的服务。
+app = FastAPI()
 
-如果你不使用Nginx做转发，前端同事调用你的后端接口，需要使用外网方式(ip或域名)，不能使用`localhost`。当然，这里是假设你使用Nginx启动了dist文件，如果你使用FastAPI挂载dist文件，然后启动服务，依旧可以使用 `localhost`。
+# 将 static 文件夹挂载到根路径，设置 html=True 来处理 index.html中绝对路径下文件的跳转
+# 如果 index.html 中使用的是相对路径，可以取消 html=True。
+app.mount("/", StaticFiles(directory="/data/fastapi_test/static", html=True), name="static")
+
+@app.get("/")
+async def root():
+    # 返回 index.html 文件
+    return FileResponse(os.path.join("/data/fastapi_test/static", "index.html"))
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+```
+
+❌**但不推荐使用使用FastAPI挂载静态资源。** FastAPI 和 Nginx 虽然都与 Web 相关，但它们的作用不同。具体来说：
+
+### FastAPI 与 Nginx 的不同
+
+#### 1. FastAPI 是一个 Web 框架：
+
+  - FastAPI 主要用于构建后端 API 服务。它负责处理客户端请求，处理业务逻辑，并返回响应。FastAPI 支持 WebSocket、异步请求等现代 Web 应用需求，是一个用 Python 编写的高效 Web 框架。
+
+  - 你可以用 FastAPI 构建 Web 应用、API 服务等，但 FastAPI 的设计重点是后端逻辑处理，不是专门用于处理高并发或静态文件的高效分发。
+
+#### 2. Nginx 是一个 Web 服务器和反向代理服务器：
+
+  - Nginx 是专门用来处理 Web 流量的高性能 Web 服务器，尤其擅长处理静态文件（如 HTML、CSS、JS、图片等）的快速分发，并且可以在非常高的并发请求下保持高效。
+
+  - 作为反向代理，Nginx 还可以在客户端请求和后端服务之间做负载均衡，将请求分发给 FastAPI、Django、Flask 等应用后端。
+
+  - Nginx 也常用于配置 HTTPS、域名解析、负载均衡等。
+
+### 什么时候使用 FastAPI，什么时候使用 Nginx？
+
+#### 1. FastAPI 用于处理业务逻辑：
+
+  - 如果你的应用需要处理复杂的 API 请求、用户身份验证、数据库操作等后端逻辑，FastAPI 是你的主要工具。
+
+  - FastAPI 的设计非常适合高并发的 API 请求，但对于静态资源的处理能力，FastAPI 并不是最优的。
+
+#### 2. Nginx 用于高效处理静态文件和反向代理：
+
+  - 当你的应用需要高效地处理大量静态资源时，Nginx 更加合适。Nginx 处理静态文件时非常快，而且还可以作为反向代理，将客户端请求转发给 FastAPI 服务。
+
+  - Nginx 也更适合配置域名、SSL 证书等操作。
+
+### 推荐的部署方式：Nginx + FastAPI
+
+🌈最常见的生产部署方式是 **Nginx + FastAPI**，其中 Nginx 负责处理域名解析、SSL 证书、静态文件分发、负载均衡等功能，而 FastAPI 处理 API 请求和业务逻辑。典型的配置如下：
+
+#### 1. Nginx 作为反向代理：
+
+  - Nginx 监听 80 或 443 端口（HTTP/HTTPS），处理客户端请求，并根据路径或其他规则将请求转发给运行在其他端口的 FastAPI 服务（例如 8000 端口）。
+
+#### 2. Nginx 处理静态文件：
+
+  - Nginx 可以直接处理你的静态资源请求，而不需要 FastAPI 进行处理。这大大减轻了 FastAPI 的负载。
+
+#### 3. 域名配置：
+
+  - 你可以在 Nginx 中轻松配置域名和 SSL 证书，FastAPI 则专注于提供 API 服务。
+
+### 总结
+
+- **FastAPI** 是一个 Web 框架，用于处理 API 请求和业务逻辑，但它并不是一个完整的 Web 服务器，不能直接高效处理域名解析、静态文件分发和 SSL 证书。
+- **Nginx** 是一个高效的 Web 服务器，适合处理域名解析、静态资源分发和反向代理。它可以与 FastAPI 配合使用，作为反向代理服务器，将请求转发给 FastAPI 服务。
+
+因此，**Nginx + FastAPI 是推荐的部署方式**，其中 Nginx 负责域名解析和静态资源处理，而 FastAPI 专注于业务逻辑处理。
 
 
 ## 附录--重定向 HTTP 到 HTTPS(可跳过):
