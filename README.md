@@ -11,7 +11,8 @@
 | 文件夹名称              | 作用                               | 备注                  |
 |-----------------------|------------------------------------|----------------------|
 | connect_remote_server | 介绍连接远程服务器的经验               | 阿里云服务器           |
-| cloud_server_deployment| 讲解云服务器中服务部署流程            | 以阿里云服务器为例      |
+| cloud_server_deployment| 讲解云服务器中服务部署流程            | 以阿里云服务器为例      |     
+| cuda_install           | CUDA工具包安装                      |                     |
 | docs                  | 存放项目中用到的图片                  |                      |
 | linux_command         | 包含常用的 Linux 命令集合             |                      |
 | nginx                 | 介绍 Nginx 配置方式和基础使用          |                     |
