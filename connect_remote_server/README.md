@@ -9,7 +9,7 @@
     - [workbench连接阿里云服务器：](#workbench连接阿里云服务器)
     - [终端、vscode连接阿里云服务器：](#终端vscode连接阿里云服务器)
     - [通过ssh密钥连接--创建密钥对：(强烈推荐🤭🤭🤭)](#通过ssh密钥连接--创建密钥对强烈推荐)
-    - [将别人的SSH密钥添加到自己的Ubuntu 18.04服务器:](#将别人的ssh密钥添加到自己的ubuntu-1804服务器)
+    - [通过SSH密钥连接ubuntu服务器:](#通过ssh密钥连接ubuntu服务器)
   - [使用阿里云提供的Redis时流量占用问题：](#使用阿里云提供的redis时流量占用问题)
     - [问题描述：](#问题描述)
     - [阿里云客服回应：](#阿里云客服回应)
@@ -151,48 +151,117 @@ vscode更智能，直接按下图点击选项即可：<br>
 
 ![](../docs/点击箭头连接远程服务器.jpg)
 
-### 将别人的SSH密钥添加到自己的Ubuntu 18.04服务器:
+### 通过SSH密钥连接ubuntu服务器:
 
-要将别人的SSH密钥添加到你的Ubuntu 18.04服务器中的`deployer`账户，你可以按照以下步骤操作：<br>
+要实现通过SSH密钥连接ubuntu服务器，需要将自己或别人的SSH密钥添加到你的Ubuntu服务器(假设你的用户名为 **deployer** )，你可以按照以下步骤操作：
 
-1. **获取密钥**：首先，确保你获得了对方的公共SSH密钥。这通常是一个`.pub`文件，例如`id_rsa.pub`。
+1. 获取密钥：
 
-2. **登录到服务器**：使用你的`deployer`账户登录到服务器。你可以使用SSH客户端来完成这一步，例如通过命令`ssh deployer@your_server_ip`。
+首先，确保你获得了自己或对方的公共SSH密钥。这通常是一个`.pub`文件，例如`id_ed25519.pub`。
 
-3. **编辑authorized_keys文件**：
+```bash
+cat ~/.ssh/id_ed25519.pub
+```
 
-    - 切换到`deployer`用户的主目录（如果你已作为`deployer`登录，那么你应该已经在这个目录里，或者 `cd /home/deployer` 进入该目录）。
+2. 登录到服务器：
+
+使用你的`deployer`账户登录到服务器。你可以使用SSH客户端来完成这一步，例如通过命令:
+
+```bash
+ssh deployer@your_server_ip
+```
+
+3. 编辑authorized_keys文件：
+
+- 切换到`deployer`用户的主目录（如果你已作为`deployer`登录，那么你应该已经在这个目录里，或者 `cd /home/deployer` 进入该目录）。
+
+- 查找(`ll -a`)一个名为`.ssh`的目录。如果没有，可以使用下列命令来创建这个目录:
+
+```bash
+mkdir -p ~/.ssh`
+```
+
+- 在`.ssh`目录中，有一个名为`authorized_keys`的文件用于存储公钥。如果该文件不存在，你可以创建它。例如:
+
+```txt
+(base) root@iZ2zea5v77oawjyxxx:~/.ssh# ll
+total 8
+drwx------  2 root root 4096 Aug  9  2023 ./
+drwx------ 31 root root 4096 Feb 29 12:10 ../
+-rw-------  1 root root  509 Aug  8  2023 authorized_keys
+-rw-r--r--  1 root root 1110 Jan 19 10:41 known_hosts
+```
+
+- 使用文本编辑器（如`vim`）打开`authorized_keys`文件。例如:
+
+```bash
+vim ~/.ssh/authorized_keys
+```
+
+4. 添加公钥：
+
+将自己或对方的公钥（从`.pub`文件中获得）复制并粘贴到`authorized_keys`文件中。每个密钥应该占一行。
+
+5. 保存并关闭文件：
+
+保存`authorized_keys`文件并关闭编辑器。
+
+6. 设置权限：
+
+- 如果其他人已经设置过权限，可以跳过这一步。
+
+- 确保`.ssh`目录的权限是700（只有所有者可以读写执行）。使用命令:
+
+```bash
+chmod 700 ~/.ssh
+```
  
-    - 查找(`ll -a`)一个名为`.ssh`的目录。如果没有，可以使用命令`mkdir -p ~/.ssh`来创建这个目录。
- 
-    - 在`.ssh`目录中，有一个名为`authorized_keys`的文件用于存储公钥。如果该文件不存在，你可以创建它。例如:
+- 确保`authorized_keys`文件的权限是600（只有所有者可以读写）。使用命令:
 
-    ```txt
-    (base) root@iZ2zea5v77oawjyxxx:~/.ssh# ll
-    total 8
-    drwx------  2 root root 4096 Aug  9  2023 ./
-    drwx------ 31 root root 4096 Feb 29 12:10 ../
-    -rw-------  1 root root  509 Aug  8  2023 authorized_keys
-    -rw-r--r--  1 root root 1110 Jan 19 10:41 known_hosts
-    ```
+```bash
+chmod 600 ~/.ssh/authorized_keys
+```
 
-    - 使用文本编辑器（如`vim`）打开`authorized_keys`文件。例如，`vim ~/.ssh/authorized_keys`。
+7. 配置服务器能够连接GitLab:(可选)
 
-4. **添加公钥**：将对方的公钥（从`.pub`文件中获得）复制并粘贴到`authorized_keys`文件中。每个密钥应该占一行。
+如果你想要服务器可以连接GitLab，还需要把私钥也配置一下，以`id_ed25519`为例:
 
-5. **保存并关闭文件**：保存`authorized_keys`文件并关闭编辑器。
+本地获取私钥内容:
 
-6. **设置权限**：
+```bash
+cat ~/.ssh/id_ed25519
+```
 
-   - 如果其他人已经设置过权限，可以跳过这一步。
+然后将私钥内容粘贴到服务器对应位置:
 
-   - 确保`.ssh`目录的权限是700（只有所有者可以读写执行）。使用命令`chmod 700 ~/.ssh`。
- 
-   - 确保`authorized_keys`文件的权限是600（只有所有者可以读写）。使用命令`chmod 600 ~/.ssh/authorized_keys`。
+```bash
+vim ~/.ssh/id_ed25519
+```
 
-7. **测试连接**：让对方尝试使用他们的SSH私钥连接到你的服务器，看是否成功。
+设置私钥的权限:
 
-完成这些步骤后，对方应该能够使用他们的SSH密钥登录到你的服务器上的`deployer`账户。<br>
+```bash
+chmod 600 ~/.ssh/id_ed25519
+```
+
+设置git个人信息，以笔者为例:
+
+```bash
+git config --global user.name "peilongchencc"
+git config --global user.email "peilongchencc@163.com"
+```
+
+现在，你就可以使用类似 `git clone` 的指令了。
+
+8. 测试连接：
+
+自己或对方，尝试使用下列指令连接远程服务器，看是否成功:
+
+```bash
+ssh deployer@your_server_ip
+```
+
+完成这些步骤后，自己或对方应该能够使用他们的SSH密钥登录到你的服务器上的`deployer`账户。
 
 
 ## 使用阿里云提供的Redis时流量占用问题：
