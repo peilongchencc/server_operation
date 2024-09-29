@@ -17,6 +17,8 @@
 | linux_command         | 包含常用的 Linux 命令集合             |                      |
 | nginx                 | 介绍 Nginx 配置方式和基础使用          |                     |
 | vim_command           | 包含常用的 Vim 命令和配置文件          | 自定义 Vim 配置       |
+| git_command           | 包含常用的 Git 命令和配置文件          |                      |
+| git_lfs               | git追踪/下载大型文件                  | 常用于上传/下载模型     |
 
 
 ## 使用说明
