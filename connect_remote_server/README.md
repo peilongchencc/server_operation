@@ -700,16 +700,46 @@ clash for Windows 不会主动修改系统设置，个人需要手动修改系�
 
 #### 临时启用代理:
 
-终端运行以下指令，可以让终端临时使用代理，只要你的终端没有关闭，就可以一直使用代理:<br>
-
-> 两个使用的都是 `"http://127.0..."`，笔者没有写错。
+终端运行以下指令，可以让终端临时使用代理，只要你的终端没有关闭，就可以一直使用代理:
 
 ```bash
-export http_proxy="http://127.0.0.1:7890"
+export HTTP_PROXY="http://127.0.0.1:7890"
+export HTTPS_PROXY="http://127.0.0.1:7890"
+export ALL_PROXY="socks5://127.0.0.1:7890"
 ```
 
+🔥通常，代理相关的 **环境变量** 约定俗成是大写的。
+
+检查代理开启:
+
 ```bash
-export https_proxy="http://127.0.0.1:7890"
+# 方法一
+echo $HTTP_PROXY
+echo $HTTPS_PROXY
+echo $ALL_PROXY
+
+# 方法二
+env | grep -i proxy
+```
+
+注意: 环境变量对大小写敏感，如果你使用类似 `export http_proxy=http://127.0.0.1:7890` 方式添加环境变量，需要使用小写形式查询，例如 `echo http_proxy`。
+
+测试效果:
+
+```bash
+# 默认https代理
+curl https://www.google.com
+# 使用socks5必须指定代理，即使指定的是不存在的代理，这是格式问题。
+curl --socks5 127.0.0.1:0 https://www.google.com
+```
+
+通过代理测试效果:
+
+```bash
+curl -x http://127.0.0.1:7890 https://www.google.com
+curl -x socks5://127.0.0.1:7890 https://www.google.com
+# 避免SSL证书问题
+curl --socks5-hostname 127.0.0.1:7890 https://www.google.com
 ```
 
 #### 永久使用代理:
