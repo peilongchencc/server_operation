@@ -1,7 +1,7 @@
-# server_operation
+# My-Server
 
-本项目用于记录笔者使用远程服务器的操作经验。<br>
-- [server\_operation](#server_operation)
+远程服务器的操作经验记录。
+- [My-Server](#my-server)
   - [目录结构](#目录结构)
   - [使用说明](#使用说明)
 
