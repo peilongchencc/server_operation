@@ -1,6 +1,6 @@
 # 连接AWS远程服务器
 
-以Mac为例，当你获得`.pem`(私钥时)指令如下：
+以Mac为例，当你获得`.pem`(私钥)时指令如下：
 
 ```bash
 mv aistar-aws-server.pem ~/.ssh/
@@ -28,3 +28,12 @@ Host *
 ```
 
 这两行配置分别允许客户端接受 `ssh-rsa` 公钥和使用 `ssh-rsa` 算法进行主机密钥验证。这是必要的，因为默认情况下，OpenSSH 的新版本禁止这些算法。
+
+笔者习惯使用VScode，VScode中可进行如下配置，方便快速进入服务器:
+
+```conf
+Host aistar-aws
+  HostName ec2-18-217-75-46.us-east-2.compute.amazonaws.com
+  User ubuntu
+  IdentityFile ~/.ssh/aistar-aws-server.pem
+```
