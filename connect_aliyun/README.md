@@ -223,6 +223,34 @@ chmod 700 ~/.ssh
 chmod 600 ~/.ssh/authorized_keys
 ```
 
+如果你所连接的服务器服务器重装系统或重新生成了 SSH 密钥，你在本地连接会提示下列信息:
+
+```bash
+(base) peilongchencc@bogon ~ % ssh root@123.56.220.xxx
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@    WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!     @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+IT IS POSSIBLE THAT SOMEONE IS DOING SOMETHING NASTY!
+Someone could be eavesdropping on you right now (man-in-the-middle attack)!
+It is also possible that a host key has just been changed.
+The fingerprint for the ED25519 key sent by the remote host is
+SHA256:E6a0ddxrp7Yg4wJXgQ/efKe+iz+y9J5A8m8xxx.
+Please contact your system administrator.
+Add correct host key in /Users/peilongchencc/.ssh/known_hosts to get rid of this message.
+Offending ECDSA key in /Users/peilongchencc/.ssh/known_hosts:49
+Host key for 123.56.220.xxx has changed and you have requested strict checking.
+Host key verification failed.
+(base) peilongchencc@bogon ~ %
+```
+
+不必惊慌，在执行 `ssh root@123.56.220.xxx` 的电脑执行下列指令直接删除旧的信任记录即可：
+
+```bash
+ssh-keygen -R 123.56.220.xxx
+```
+
+执行后，就可以正常连接上远程服务器了。
+
 7. 配置服务器能够连接GitLab:(可选)
 
 如果你想要服务器可以连接GitLab，还需要把私钥也配置一下，以`id_ed25519`为例:
